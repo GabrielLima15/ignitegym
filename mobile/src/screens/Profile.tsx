@@ -14,6 +14,7 @@ import { Controller, useForm } from "react-hook-form";
 import { useAuth } from "@hooks/useAuth";
 import { AppError } from "@utils/AppError";
 import { api } from "@services/api";
+import DefaultUser from "@assets/userPhotoDefault.png";
 
 type FormDataProps = {
   name: string;
@@ -43,7 +44,6 @@ const profileSchema = yup.object({
 })
 
 export function Profile() {
-  const [userPhoto, setUserPhoto] = useState("https://github.com/gabriellima15.png");
   const [isUpdating, setIsUpdating] = useState(false)
   const toast = useToast();
   const { user, updateUserProfile } = useAuth()
@@ -77,6 +77,7 @@ export function Profile() {
           size: number
         }
 
+
         if (photoInfo.size && (photoInfo.size / 1024 / 1024) > 5) {
           return toast.show({
             placement: "top",
@@ -91,7 +92,38 @@ export function Profile() {
           })
         }
 
-        setUserPhoto(photoURI)
+        const fileExtension = photoSelected.assets[0].uri.split('').pop()
+
+        const photoFile = {
+          name: `${user.name}.${fileExtension}`.toLocaleLowerCase(),
+          uri: photoSelected.assets[0].uri,
+          type: `${photoSelected.assets[0].type}/${fileExtension}`
+        } as any
+
+        const userPhotoUploadForm = new FormData()
+        userPhotoUploadForm.append('avatar', photoFile)
+
+        const avatarUpdatedResponse = await api.patch('/users/avatar', userPhotoUploadForm, {
+          headers: {
+            'Content-type': 'multipart/form-data'
+          }
+        })
+
+        const userUpdated = user
+        userUpdated.avatar = avatarUpdatedResponse.data.avatar
+        updateUserProfile(userUpdated)
+
+        toast.show({
+          placement: "top",
+          render: ({ id }) => (
+            <ToastMessage
+              id={id}
+              title="Foto atualizada!"
+              action="success"
+              onClose={() => toast.close(id)}
+            />
+          )
+        })
       }
     } catch (error) {
       console.log(error)
@@ -151,7 +183,7 @@ export function Profile() {
       }}>
         <Center mt="$6" px="$10">
           <UserPhoto
-            source={{ uri: userPhoto }}
+            source={user.avatar ? { uri: `${api.defaults.baseURL}/avatar/${user.avatar}` } : DefaultUser}
             alt="Foto do usuário"
             size="xl"
           />
