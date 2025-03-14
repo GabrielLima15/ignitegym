@@ -1,7 +1,7 @@
 import { Box, Heading, Text, useToast } from "@gluestack-ui/themed";
 import { HStack, Icon, VStack } from "@gluestack-ui/themed";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { HomeNavigatorRoutesProps } from "@routes/app.routes";
+import { AppNavigatorRoutesProps, HomeNavigatorRoutesProps } from "@routes/app.routes";
 import { ArrowLeft } from "lucide-react-native";
 import { ScrollView, TouchableOpacity } from "react-native";
 import BodySvg from '@assets/body.svg';
@@ -26,9 +26,10 @@ type RouteParamsProps = {
 export function Exercise() {
   const [exercise, setExercise] = useState<ExerciseDTO>({} as ExerciseDTO)
   const [isLoading, setIsLoading] = useState(true);
+  const [sendingRegister, setSendingRegister] = useState(false);
   const toast = useToast();
 
-  const navigation = useNavigation<HomeNavigatorRoutesProps>()
+  const navigation = useNavigation<AppNavigatorRoutesProps>()
   const route = useRoute()
 
   const { exerciseId } = route.params as RouteParamsProps
@@ -56,6 +57,47 @@ export function Exercise() {
 
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function handleExerciseHistoryRegister() {
+    try {
+      setSendingRegister(true)
+
+      const response = await api.post('/history', { exercise_id: exerciseId })
+
+      toast.show({
+        placement: "top",
+        render: ({ id }) => (
+          <ToastMessage
+            id={id}
+            title="Parabéns! Exercício registrado no seu histórico."
+            action="success"
+            onClose={() => toast.close(id)}
+          />
+        )
+      })
+
+      navigation.navigate("history")
+
+    } catch (error) {
+      const isAppError = error instanceof AppError
+      const title = isAppError ? error?.message : 'Não foi possível registrar o exercicio.'
+
+      toast.show({
+        placement: "top",
+        render: ({ id }) => (
+          <ToastMessage
+            id={id}
+            title={title}
+            action="error"
+            onClose={() => toast.close(id)}
+          />
+        )
+      })
+
+    } finally {
+      setSendingRegister(false)
     }
   }
 
@@ -112,7 +154,7 @@ export function Exercise() {
                 </HStack>
               </HStack>
 
-              <Button title="Marcar como realizado" />
+              <Button onPress={handleExerciseHistoryRegister} isLoading={sendingRegister} title="Marcar como realizado" />
             </Box>
 
           </VStack>
